@@ -142,17 +142,24 @@ function isPlacedCow(data, width, row, column, background) {
   const insetY = Math.max(3, Math.floor((row.end - row.start) / 5));
   const insetX = Math.max(3, Math.floor((column.end - column.start) / 5));
   let changedPixels = 0;
+  let orangeCrossPixels = 0;
   let totalPixels = 0;
   for (let y = row.start + insetY; y < row.end - insetY; y += 1) {
     for (let x = column.start + insetX; x < column.end - insetX; x += 1) {
       const offset = (y * width + x) * 4;
       const difference = Math.hypot(data[offset] - background[0], data[offset + 1] - background[1], data[offset + 2] - background[2]);
-      if (difference > 65) changedPixels += 1;
+      if (difference > 65) {
+        changedPixels += 1;
+        const red = data[offset];
+        const green = data[offset + 1];
+        const blue = data[offset + 2];
+        if (red > green + 35 && green > blue + 20 && red > 140) orangeCrossPixels += 1;
+      }
       totalPixels += 1;
     }
   }
-  // 游戏中的小牛图标会覆盖格子中心的大部分底色；普通方格的颜色偏差远低于此阈值。
-  return totalPixels > 0 && changedPixels / totalPixels >= 0.28;
+  // 小牛图标会覆盖格子中心，且包含眼睛、轮廓等多种明暗颜色；错误 X 几乎是单一橙红色。
+  return totalPixels > 0 && changedPixels / totalPixels >= 0.28 && orangeCrossPixels / changedPixels < 0.85;
 }
 
 function findPlacedCows(data, width, rows, columns, samples, labels) {
