@@ -89,18 +89,19 @@ function findGrid(mask, width, height) {
 }
 
 function dominantCellColor(data, width, row, column) {
-  const insetY = Math.max(3, Math.floor((row.end - row.start) / 5));
-  const insetX = Math.max(3, Math.floor((column.end - column.start) / 5));
-  const yStart = row.start + insetY;
-  const yEnd = row.end - insetY;
-  const xStart = column.start + insetX;
-  const xEnd = column.end - insetX;
-  if (yEnd <= yStart || xEnd <= xStart) throw new SolveError('棋盘格尺寸异常。');
+  const height = row.end - row.start;
+  const cellWidth = column.end - column.start;
+  const innerMargin = Math.max(3, Math.floor(Math.min(height, cellWidth) * 0.08));
+  const borderWidth = Math.max(4, Math.floor(Math.min(height, cellWidth) * 0.14));
+  if (height <= innerMargin * 2 || cellWidth <= innerMargin * 2) throw new SolveError('棋盘格尺寸异常。');
 
   const buckets = new Map();
   let usableCount = 0;
-  for (let y = yStart; y < yEnd; y += 1) {
-    for (let x = xStart; x < xEnd; x += 1) {
+  // 从格子边缘的彩色边框取主色，避开中央已放小牛、叉号等覆盖图标。
+  for (let y = row.start + innerMargin; y < row.end - innerMargin; y += 1) {
+    for (let x = column.start + innerMargin; x < column.end - innerMargin; x += 1) {
+      const edgeDistance = Math.min(y - row.start, row.end - y - 1, x - column.start, column.end - x - 1);
+      if (edgeDistance > borderWidth) continue;
       const offset = (y * width + x) * 4;
       const red = data[offset];
       const green = data[offset + 1];
@@ -119,8 +120,10 @@ function dominantCellColor(data, width, row, column) {
   const reds = [];
   const greens = [];
   const blues = [];
-  for (let y = yStart; y < yEnd; y += 1) {
-    for (let x = xStart; x < xEnd; x += 1) {
+  for (let y = row.start + innerMargin; y < row.end - innerMargin; y += 1) {
+    for (let x = column.start + innerMargin; x < column.end - innerMargin; x += 1) {
+      const edgeDistance = Math.min(y - row.start, row.end - y - 1, x - column.start, column.end - x - 1);
+      if (edgeDistance > borderWidth) continue;
       const offset = (y * width + x) * 4;
       const red = data[offset];
       const green = data[offset + 1];
