@@ -17,6 +17,12 @@
       #dropZone:hover, #dropZone.dragging { background: #edf6ff; border-color: #2b86e6; transform: translateY(-1px); }
       #dropZone strong { color: #214a7c; font-size: 20px; }
       #fileInput { display: none; }
+      .mode-picker { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 0; padding: 0; border: 0; }
+      .mode-picker legend { width: 100%; margin-bottom: 2px; color: #52627c; font-size: 14px; }
+      .mode-picker label { display: flex; flex: 1 1 245px; gap: 9px; align-items: flex-start; padding: 11px 13px; cursor: pointer; border: 1px solid #d9e4f4; border-radius: 12px; color: #3e4f6d; background: #fbfdff; font-size: 14px; line-height: 1.5; }
+      .mode-picker label:has(input:checked) { border-color: #5b9fed; background: #f0f7ff; box-shadow: 0 0 0 3px rgba(43, 134, 230, .10); }
+      .mode-picker input { width: 16px; height: 16px; margin: 2px 0 0; accent-color: #247dde; }
+      .mode-picker strong { display: block; color: #214a7c; }
       .hint, .status { margin: 12px 0 0; color: #61708a; font-size: 14px; }
       .status { min-height: 22px; color: #225f9f; }
       .error { color: #bf3041; }
@@ -44,13 +50,24 @@
   <body>
     <main>
       <h1>佛系消消消 · 小牛解题器</h1>
-      <p class="lead">上传抖音《佛系消消消》的完整小牛关卡截图，自动识别棋盘颜色并给出落点。规则为：每行、每列、每种颜色各一头小牛，且小牛不能相邻。</p>
+      <p class="lead">上传抖音《佛系消消消》的完整小牛关卡截图，选择单牛或双牛规则后，自动识别棋盘颜色并给出落点。</p>
       <section class="card">
         <label id="dropZone" for="fileInput">
           <strong>点击选择截图、拖入图片，或直接粘贴</strong>
           <span>支持 PNG、JPG、WebP；复制截图后按 ⌘V 即可识别。图片只在当前浏览器中处理。</span>
         </label>
         <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp" />
+        <fieldset class="mode-picker">
+          <legend>关卡模式</legend>
+          <label>
+            <input type="radio" name="cowMode" value="1" checked />
+            <span><strong>单牛模式</strong>每种颜色、每行和每列各放 1 头小牛。</span>
+          </label>
+          <label>
+            <input type="radio" name="cowMode" value="2" />
+            <span><strong>双牛模式</strong>每种颜色、每行和每列各放 2 头小牛。</span>
+          </label>
+        </fieldset>
         <p class="hint">建议上传游戏原始全屏截图，棋盘不能被弹窗或手指遮住。</p>
         <p id="status" class="status" aria-live="polite"></p>
       </section>
