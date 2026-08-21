@@ -2,7 +2,7 @@
 
 纯前端的小牛逻辑题截图识别与求解工具。上传游戏截图后，浏览器会自动识别棋盘颜色、计算落点并在图片上标注答案。
 
-在线使用：部署完成后访问 GitHub Pages 地址即可。
+在线使用：[https://aboutthepast.github.io/cow-screenshot-solver/](https://aboutthepast.github.io/cow-screenshot-solver/)
 
 ## 本地预览
 
