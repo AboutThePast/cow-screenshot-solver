@@ -135,6 +135,34 @@ function dominantCellColor(data, width, row, column) {
   return [median(reds), median(greens), median(blues)];
 }
 
+function isPlacedCow(data, width, row, column, background) {
+  const insetY = Math.max(3, Math.floor((row.end - row.start) / 5));
+  const insetX = Math.max(3, Math.floor((column.end - column.start) / 5));
+  let changedPixels = 0;
+  let totalPixels = 0;
+  for (let y = row.start + insetY; y < row.end - insetY; y += 1) {
+    for (let x = column.start + insetX; x < column.end - insetX; x += 1) {
+      const offset = (y * width + x) * 4;
+      const difference = Math.hypot(data[offset] - background[0], data[offset + 1] - background[1], data[offset + 2] - background[2]);
+      if (difference > 65) changedPixels += 1;
+      totalPixels += 1;
+    }
+  }
+  // 游戏中的小牛图标会覆盖格子中心的大部分底色；普通方格的颜色偏差远低于此阈值。
+  return totalPixels > 0 && changedPixels / totalPixels >= 0.28;
+}
+
+function findPlacedCows(data, width, rows, columns, samples, labels) {
+  const placements = [];
+  rows.forEach((row, rowIndex) => columns.forEach((column, columnIndex) => {
+    const sampleIndex = rowIndex * columns.length + columnIndex;
+    if (isPlacedCow(data, width, row, column, samples[sampleIndex])) {
+      placements.push({ row: rowIndex, column: columnIndex, color: labels[sampleIndex] });
+    }
+  }));
+  return placements;
+}
+
 function clusterColors(samples, size) {
   const representatives = [];
   const labels = [];
@@ -181,7 +209,7 @@ function rowCandidates(colorGrid, row, cowsPerGroup) {
   return candidates;
 }
 
-export function solveColorGrid(colorGrid, cowsPerGroup = 1) {
+export function solveColorGrid(colorGrid, cowsPerGroup = 1, fixedPlacements = []) {
   const size = colorGrid.length;
   if (!Number.isInteger(cowsPerGroup) || ![1, 2].includes(cowsPerGroup)) {
     throw new SolveError('请选择单牛或双牛模式。');
@@ -190,7 +218,36 @@ export function solveColorGrid(colorGrid, cowsPerGroup = 1) {
     throw new SolveError(`${size}×${size} 棋盘无法满足每行放 ${cowsPerGroup} 头且小牛不相邻的规则。`);
   }
 
-  const candidatesByRow = colorGrid.map((_, row) => rowCandidates(colorGrid, row, cowsPerGroup));
+  const fixedByRow = Array.from({ length: size }, () => []);
+  const fixedKeys = new Set();
+  for (const placement of fixedPlacements) {
+    if (!Number.isInteger(placement.row) || !Number.isInteger(placement.column)
+      || placement.row < 0 || placement.row >= size || placement.column < 0 || placement.column >= size) {
+      throw new SolveError('已放小牛的位置超出棋盘范围。');
+    }
+    const key = `${placement.row},${placement.column}`;
+    if (fixedKeys.has(key)) continue;
+    if (colorGrid[placement.row][placement.column] !== placement.color) {
+      throw new SolveError('已放小牛的颜色与棋盘识别结果不一致。');
+    }
+    fixedKeys.add(key);
+    fixedByRow[placement.row].push(placement);
+  }
+  for (const placements of fixedByRow) {
+    if (placements.length > cowsPerGroup) throw new SolveError('同一行已放的小牛数量超过当前模式要求。');
+  }
+  for (let left = 0; left < fixedPlacements.length; left += 1) {
+    for (let right = left + 1; right < fixedPlacements.length; right += 1) {
+      const a = fixedPlacements[left];
+      const b = fixedPlacements[right];
+      if (Math.abs(a.row - b.row) <= 1 && Math.abs(a.column - b.column) <= 1) {
+        throw new SolveError('已放小牛之间存在相邻位置，请先在游戏中撤销冲突的小牛。');
+      }
+    }
+  }
+
+  const candidatesByRow = colorGrid.map((_, row) => rowCandidates(colorGrid, row, cowsPerGroup)
+    .filter((candidate) => fixedByRow[row].every((placement) => candidate.columns.includes(placement.column))));
   const suffixColorCells = Array.from({ length: size + 1 }, () => new Array(size).fill(0));
   for (let row = size - 1; row >= 0; row -= 1) {
     suffixColorCells[row] = [...suffixColorCells[row + 1]];
@@ -240,9 +297,13 @@ export function solvePixels(data, width, height, { cowsPerGroup = 1 } = {}) {
   const samples = rows.flatMap((row) => columns.map((column) => dominantCellColor(data, width, row, column)));
   const { labels, representatives } = clusterColors(samples, size);
   const colorGrid = Array.from({ length: size }, (_, row) => labels.slice(row * size, (row + 1) * size));
-  const answers = solveColorGrid(colorGrid, cowsPerGroup);
-  if (!answers.length) throw new SolveError(`按${cowsPerGroup === 2 ? '双牛' : '单牛'}规则无法找到符合条件的摆放。请确认模式和截图内容是否一致，或重新上传原始关卡截图。`);
-  return { rows, columns, representatives, answer: answers[0], solutionCount: answers.length, cowsPerGroup };
+  const fixedPlacements = findPlacedCows(data, width, rows, columns, samples, labels);
+  const answers = solveColorGrid(colorGrid, cowsPerGroup, fixedPlacements);
+  if (!answers.length) {
+    const prefix = fixedPlacements.length ? `已识别出 ${fixedPlacements.length} 头已放小牛，但` : '';
+    throw new SolveError(`${prefix}按${cowsPerGroup === 2 ? '双牛' : '单牛'}规则无法找到符合条件的摆放。请确认模式和截图内容是否一致，或上传未操作过的原始关卡截图。`);
+  }
+  return { rows, columns, representatives, answer: answers[0], solutionCount: answers.length, cowsPerGroup, fixedPlacements };
 }
 
 function colorToHex(color) {
@@ -252,7 +313,8 @@ function colorToHex(color) {
 export function buildStrategy(solution) {
   const size = solution.rows.length;
   const cowsPerGroup = solution.cowsPerGroup ?? 1;
-  const steps = solution.answer.map((placement, index) => {
+  const fixedKeys = new Set((solution.fixedPlacements ?? []).map((placement) => `${placement.row},${placement.column}`));
+  const steps = solution.answer.flatMap((placement, index) => {
     const color = colorToHex(solution.representatives[placement.color]);
     const sameRow = solution.answer.slice(0, index).filter((cell) => cell.row === placement.row);
     const previousRow = solution.answer.filter((cell) => cell.row === placement.row - 1);
@@ -269,10 +331,11 @@ export function buildStrategy(solution) {
       spacing.push(`与上一行的落点最近相隔 ${gap} 列，避开了竖向和斜向相邻。`);
     }
     if (!spacing.length) spacing.push('先从第一行的这格开始，为后续各行保留符合条件的列和颜色。');
-    return { color, title: `第 ${placement.row + 1} 行，第 ${placement.column + 1} 列`, description: `${base}${spacing.join('')}` };
+    const step = { color, title: `第 ${placement.row + 1} 行，第 ${placement.column + 1} 列`, description: `${base}${spacing.join('')}` };
+    return fixedKeys.has(`${placement.row},${placement.column}`) ? [] : [step];
   });
   return {
-    intro: `红圈中的 ${solution.answer.length} 个格子构成一组${cowsPerGroup === 2 ? '双牛' : '单牛'}答案：每一行、每一列和每一种颜色都恰好有 ${cowsPerGroup} 头小牛；横向、竖向和斜向相邻的格子不会同时放牛。`,
+    intro: `${solution.fixedPlacements?.length ? `已识别并保留 ${solution.fixedPlacements.length} 头已放小牛；` : ''}红圈中的 ${solution.answer.length - fixedKeys.size} 个格子是还需要补上的${cowsPerGroup === 2 ? '双牛' : '单牛'}答案：每一行、每一列和每一种颜色都恰好有 ${cowsPerGroup} 头小牛；横向、竖向和斜向相邻的格子不会同时放牛。`,
     note: solution.solutionCount === 1
       ? '本关解唯一，按红圈顺序或任意顺序点击这些格子都可以。'
       : '本关存在多个可行解；红圈和下列步骤展示的是其中一条可直接照着点击的路线。',
@@ -285,7 +348,11 @@ function drawSolution(canvas, solution) {
   context.save();
   context.textAlign = 'center';
   context.textBaseline = 'middle';
-  solution.answer.forEach((placement, index) => {
+  const fixedKeys = new Set((solution.fixedPlacements ?? []).map((placement) => `${placement.row},${placement.column}`));
+  let sequence = 0;
+  solution.answer.forEach((placement) => {
+    if (fixedKeys.has(`${placement.row},${placement.column}`)) return;
+    sequence += 1;
     const row = solution.rows[placement.row];
     const column = solution.columns[placement.column];
     const x = (column.start + column.end) / 2;
@@ -300,7 +367,7 @@ function drawSolution(canvas, solution) {
     context.stroke();
     context.fillStyle = '#fff';
     context.font = `700 ${Math.max(14, Math.round(radius * 1.05))}px sans-serif`;
-    context.fillText(String(index + 1), x, y + 1);
+    context.fillText(String(sequence), x, y + 1);
   });
   context.restore();
 }
@@ -360,7 +427,9 @@ if (typeof document !== 'undefined') {
       const solution = solvePixels(pixels, canvas.width, canvas.height, { cowsPerGroup });
       drawSolution(canvas, solution);
       answerImage.src = canvas.toDataURL('image/png');
-      answerList.replaceChildren(...solution.answer.map((cell, index) => {
+      const fixedKeys = new Set(solution.fixedPlacements.map((placement) => `${placement.row},${placement.column}`));
+      const remainingCells = solution.answer.filter((cell) => !fixedKeys.has(`${cell.row},${cell.column}`));
+      answerList.replaceChildren(...remainingCells.map((cell, index) => {
         const item = document.createElement('div');
         const color = colorToHex(solution.representatives[cell.color]);
         item.className = 'cell';
@@ -388,9 +457,8 @@ if (typeof document !== 'undefined') {
       strategyPanel.hidden = false;
       const size = solution.rows.length;
       const mode = solution.cowsPerGroup === 2 ? '双牛' : '单牛';
-      meta.textContent = solution.solutionCount === 1
-        ? `识别为 ${size}×${size} ${mode}棋盘，解唯一。`
-        : `识别为 ${size}×${size} ${mode}棋盘，存在多个可行解，以下为其中一个。`;
+      const resultSummary = solution.solutionCount === 1 ? '解唯一。' : '存在多个可行解，以下为其中一个。';
+      meta.textContent = `识别为 ${size}×${size} ${mode}棋盘，${resultSummary}${solution.fixedPlacements.length ? ` 已识别 ${solution.fixedPlacements.length} 头已经放置的小牛，下面列出还需补的 ${remainingCells.length} 头。` : ''}`;
       result.style.display = 'block';
       requestAnimationFrame(() => result.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }));
       setStatus('求解完成。');
