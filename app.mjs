@@ -143,6 +143,7 @@ function isPlacedCow(data, width, row, column, background) {
   const insetX = Math.max(3, Math.floor((column.end - column.start) / 5));
   let changedPixels = 0;
   let orangeCrossPixels = 0;
+  let whiteCrossPixels = 0;
   let totalPixels = 0;
   for (let y = row.start + insetY; y < row.end - insetY; y += 1) {
     for (let x = column.start + insetX; x < column.end - insetX; x += 1) {
@@ -154,12 +155,15 @@ function isPlacedCow(data, width, row, column, background) {
         const green = data[offset + 1];
         const blue = data[offset + 2];
         if (red > green + 35 && green > blue + 20 && red > 140) orangeCrossPixels += 1;
+        if ((red + green + blue) / 3 > 205 && Math.max(red, green, blue) - Math.min(red, green, blue) < 45) whiteCrossPixels += 1;
       }
       totalPixels += 1;
     }
   }
-  // 小牛图标会覆盖格子中心，且包含眼睛、轮廓等多种明暗颜色；错误 X 几乎是单一橙红色。
-  return totalPixels > 0 && changedPixels / totalPixels >= 0.28 && orangeCrossPixels / changedPixels < 0.85;
+  // 小牛图标会覆盖格子中心，且包含眼睛、轮廓等多种明暗颜色；错误 X 则几乎是单一橙红色或纯白色。
+  return totalPixels > 0 && changedPixels / totalPixels >= 0.28
+    && orangeCrossPixels / changedPixels < 0.85
+    && whiteCrossPixels / changedPixels < 0.75;
 }
 
 function findPlacedCows(data, width, rows, columns, samples, labels) {
