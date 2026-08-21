@@ -22,6 +22,7 @@
       .error { color: #bf3041; }
       #result { display: none; margin-top: 28px; scroll-margin-top: 18px; }
       .result-grid { display: grid; grid-template-columns: minmax(280px, .86fr) 1.14fr; gap: 22px; align-items: start; }
+      .visual-column { display: grid; gap: 16px; }
       .panel { overflow: hidden; border-radius: 16px; border: 1px solid #e0e8f4; background: #fff; }
       #answerImage { display: block; width: 100%; max-height: 700px; object-fit: contain; background: #eff3f9; }
       .panel h2 { margin: 0; padding: 18px 18px 10px; font-size: 18px; }
@@ -30,6 +31,13 @@
       .cell { padding: 10px; border: 1px solid #e8edf5; border-radius: 10px; background: #fbfcff; font-size: 15px; }
       .dot { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 50%; border: 1px solid rgba(0,0,0,.12); }
       .notice { padding: 12px 18px 18px; color: #7b6142; font-size: 13px; line-height: 1.6; }
+      #strategyPanel { padding: 18px; }
+      #strategyPanel h2 { padding: 0 0 8px; }
+      .strategy-intro, .strategy-note { margin: 0; color: #52627c; font-size: 14px; line-height: 1.65; }
+      .strategy-list { display: grid; gap: 10px; margin: 14px 0; padding: 0; list-style: none; counter-reset: strategy; }
+      .strategy-list li { position: relative; padding: 10px 10px 10px 38px; border-radius: 10px; background: #f7faff; color: #3e4f6d; font-size: 14px; line-height: 1.55; counter-increment: strategy; }
+      .strategy-list li::before { position: absolute; top: 10px; left: 10px; display: grid; width: 20px; height: 20px; place-items: center; border-radius: 50%; color: #fff; background: #e23340; font-size: 12px; font-weight: 700; content: counter(strategy); }
+      .strategy-list strong { display: block; color: #1f385d; }
       @media (max-width: 720px) { main { padding-top: 32px; } .card { padding: 18px; } .result-grid { grid-template-columns: 1fr; } }
     </style>
   </head>
@@ -48,7 +56,15 @@
       </section>
       <section id="result" class="card">
         <div class="result-grid">
-          <div class="panel"><img id="answerImage" alt="已标出小牛顺序的截图" /></div>
+          <div class="visual-column">
+            <div class="panel"><img id="answerImage" alt="已标出小牛顺序的截图" /></div>
+            <aside id="strategyPanel" class="panel" hidden aria-labelledby="strategyTitle">
+              <h2 id="strategyTitle">点击攻略</h2>
+              <p id="strategyIntro" class="strategy-intro"></p>
+              <ol id="strategyList" class="strategy-list"></ol>
+              <p id="strategyNote" class="strategy-note"></p>
+            </aside>
+          </div>
           <div class="panel">
             <h2>放置坐标</h2>
             <p id="meta"></p>

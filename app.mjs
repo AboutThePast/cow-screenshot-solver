@@ -206,6 +206,26 @@ function colorToHex(color) {
   return `#${color.map((value) => value.toString(16).padStart(2, '0')).join('')}`;
 }
 
+export function buildStrategy(solution) {
+  const size = solution.rows.length;
+  const steps = solution.answer.map((placement, index) => {
+    const previous = solution.answer[index - 1];
+    const color = colorToHex(solution.representatives[placement.color]);
+    const base = `选择第 ${placement.row + 1} 行、第 ${placement.column + 1} 列：在这条解题路线中，它占用第 ${placement.column + 1} 列和这种颜色，其他小牛不会再重复使用。`;
+    const spacing = previous
+      ? `它与上一行落点相差 ${Math.abs(placement.column - previous.column)} 列，避开了相邻限制。`
+      : '先确定第一行的落点，为后续各行保留不重复的列和颜色。';
+    return { color, title: `第 ${placement.row + 1} 行，第 ${placement.column + 1} 列`, description: `${base}${spacing}` };
+  });
+  return {
+    intro: `红圈中的 ${size} 个格子构成一组完整答案：每一行、每一列和每一种颜色都只使用一次；相邻两行的列号至少相差 2，因此不会斜向相邻。`,
+    note: solution.solutionCount === 1
+      ? '本关解唯一，按红圈顺序或任意顺序点击这些格子都可以。'
+      : '本关存在多个可行解；红圈和下列步骤展示的是其中一条可直接照着点击的路线。',
+    steps,
+  };
+}
+
 function drawSolution(canvas, solution) {
   const context = canvas.getContext('2d');
   context.save();
@@ -255,6 +275,10 @@ if (typeof document !== 'undefined') {
   const answerImage = document.querySelector('#answerImage');
   const answerList = document.querySelector('#answerList');
   const meta = document.querySelector('#meta');
+  const strategyPanel = document.querySelector('#strategyPanel');
+  const strategyIntro = document.querySelector('#strategyIntro');
+  const strategyList = document.querySelector('#strategyList');
+  const strategyNote = document.querySelector('#strategyNote');
 
   function setStatus(message, isError = false) {
     status.textContent = message;
@@ -290,6 +314,22 @@ if (typeof document !== 'undefined') {
         item.append(dot, `${index + 1}. 第 ${cell.row + 1} 行，第 ${cell.column + 1} 列`);
         return item;
       }));
+      const strategy = buildStrategy(solution);
+      strategyIntro.textContent = strategy.intro;
+      strategyList.replaceChildren(...strategy.steps.map((step) => {
+        const item = document.createElement('li');
+        const title = document.createElement('strong');
+        const color = document.createElement('span');
+        color.className = 'dot';
+        color.style.background = step.color;
+        title.append(color, step.title);
+        const description = document.createElement('span');
+        description.textContent = step.description;
+        item.append(title, description);
+        return item;
+      }));
+      strategyNote.textContent = strategy.note;
+      strategyPanel.hidden = false;
       const size = solution.rows.length;
       meta.textContent = solution.solutionCount === 1 ? `识别为 ${size}×${size} 棋盘，解唯一。` : `识别为 ${size}×${size} 棋盘，存在多个可行解，以下为其中一个。`;
       result.style.display = 'block';
