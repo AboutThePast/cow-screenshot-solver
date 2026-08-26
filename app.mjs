@@ -408,6 +408,7 @@ if (typeof document !== 'undefined') {
   const status = document.querySelector('#status');
   const result = document.querySelector('#result');
   const answerImage = document.querySelector('#answerImage');
+  const answerImageButton = document.querySelector('#answerImageButton');
   const answerList = document.querySelector('#answerList');
   const meta = document.querySelector('#meta');
   const strategyPanel = document.querySelector('#strategyPanel');
@@ -484,6 +485,7 @@ if (typeof document !== 'undefined') {
   }
 
   input.addEventListener('change', () => solve(input.files[0]));
+  answerImageButton.addEventListener('click', () => input.click());
   ['dragenter', 'dragover'].forEach((eventName) => dropZone.addEventListener(eventName, (event) => {
     event.preventDefault();
     dropZone.classList.add('dragging');

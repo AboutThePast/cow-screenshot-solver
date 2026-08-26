@@ -30,7 +30,11 @@
       .result-grid { display: grid; grid-template-columns: minmax(280px, .86fr) 1.14fr; gap: 22px; align-items: start; }
       .visual-column { display: grid; gap: 16px; }
       .panel { overflow: hidden; border-radius: 16px; border: 1px solid #e0e8f4; background: #fff; }
-      #answerImage { display: block; width: 100%; max-height: 700px; object-fit: contain; background: #eff3f9; }
+      .answer-image-button { position: relative; display: block; width: 100%; padding: 0; overflow: hidden; cursor: pointer; border: 0; background: #eff3f9; }
+      .answer-image-button:focus-visible { outline: 3px solid #2b86e6; outline-offset: -3px; }
+      #answerImage { display: block; width: 100%; max-height: 700px; object-fit: contain; }
+      .image-upload-hint { position: absolute; right: 12px; bottom: 12px; padding: 7px 10px; border-radius: 999px; color: #fff; background: rgba(24, 35, 56, .74); font-size: 13px; font-weight: 600; opacity: .84; transition: opacity .16s ease; pointer-events: none; }
+      .answer-image-button:hover .image-upload-hint, .answer-image-button:focus-visible .image-upload-hint { opacity: 1; }
       .panel h2 { margin: 0; padding: 18px 18px 10px; font-size: 18px; }
       #meta { margin: 0; padding: 0 18px 14px; color: #61708a; }
       #answerList { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 0 18px 18px; }
@@ -74,7 +78,12 @@
       <section id="result" class="card">
         <div class="result-grid">
           <div class="visual-column">
-            <div class="panel"><img id="answerImage" alt="已标出小牛顺序的截图" /></div>
+            <div class="panel">
+              <button id="answerImageButton" class="answer-image-button" type="button" title="点击选择另一张截图" aria-label="点击选择另一张截图">
+                <img id="answerImage" alt="已标出小牛顺序的截图" />
+                <span class="image-upload-hint" aria-hidden="true">点图换截图</span>
+              </button>
+            </div>
             <aside id="strategyPanel" class="panel" hidden aria-labelledby="strategyTitle">
               <h2 id="strategyTitle">点击攻略</h2>
               <p id="strategyIntro" class="strategy-intro"></p>
@@ -91,6 +100,6 @@
         </div>
       </section>
     </main>
-    <script type="module" src="./app.mjs?v=resume-mode-4"></script>
+    <script type="module" src="./app.mjs?v=resume-mode-5"></script>
   </body>
 </html>
